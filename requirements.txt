@@ -1,0 +1,12 @@
+submodules/diff-gaussian-rasterization
+submodules/simple-knn
+git+https://github.com/NVlabs/tiny-cuda-nn.git/#subdirectory=bindings/torch
+numpy==1.23.4
+plyfile==0.8.1
+tqdm
+imageio==2.27.0
+opencv-python
+imageio-ffmpeg
+scipy
+dearpygui
+lpips

@@ -131,3 +131,49 @@ def safe_state(silent):
     np.random.seed(0)
     torch.manual_seed(0)
     torch.cuda.set_device(torch.device("cuda:0"))
+
+def contract_to_unisphere(
+    x: torch.Tensor,
+    aabb: torch.Tensor,
+    ord: int = 2,
+    eps: float = 1e-6,
+    derivative: bool = False,
+):
+    # Implementation from nerfacc:
+    # https://github.com/nerfstudio-project/nerfacc/blob/57ccfa14feb94975836ea6913149a86737220f2b/examples/radiance_fields/ngp.py#L42
+    aabb_min, aabb_max = torch.split(aabb, 3, dim=-1)
+    x = (x - aabb_min) / (aabb_max - aabb_min)
+    x = x * 2 - 1  # aabb is at [-1, 1]
+    mag = torch.linalg.norm(x, ord=ord, dim=-1, keepdim=True)
+    mask = mag.squeeze(-1) > 1
+    
+    if derivative:
+        dev = (2 * mag - 1) / mag**2 + 2 * x**2 * (
+            1 / mag**3 - (2 * mag - 1) / mag**4
+        )
+        dev[~mask] = 1.0
+        dev = torch.clamp(dev, min=eps)
+        return dev
+    else:
+        x[mask] = (2 - 1 / mag[mask]) * (x[mask] / mag[mask])
+        x = x / 4 + 0.5  # [-inf, inf] is at [0, 1]
+        return x
+
+def splitBy3(a):
+    # Implementation from c3dgs:
+    # https://github.com/KeKsBoTer/c3dgs/blob/735481abc62a232891dc004e8801109c15c6f767/scene/gaussian_model.py#L822
+    x = a & 0x1FFFFF  # we only look at the first 21 bits
+    x = (x | x << 32) & 0x1F00000000FFFF
+    x = (x | x << 16) & 0x1F0000FF0000FF
+    x = (x | x << 8) & 0x100F00F00F00F00F
+    x = (x | x << 4) & 0x10C30C30C30C30C3
+    x = (x | x << 2) & 0x1249249249249249
+    return x
+
+def mortonEncode(pos: torch.Tensor) -> torch.Tensor:
+    # Implementation from c3dgs:
+    # https://github.com/KeKsBoTer/c3dgs/blob/735481abc62a232891dc004e8801109c15c6f767/scene/gaussian_model.py#L832
+    x, y, z = pos.unbind(-1)
+    answer = torch.zeros(len(pos), dtype=torch.long, device=pos.device)
+    answer |= splitBy3(x) | splitBy3(y) << 1 | splitBy3(z) << 2
+    return answer
