@@ -27,7 +27,7 @@ def convert(dataset : ModelParams, iteration : int):
             else:
                 load_iteration = iteration
 
-        gaussians.decompress_attributes(os.path.join(dataset.model_path, 'compression/iteration_{}'.format(load_iteration)))
+        gaussians.load_attributes(os.path.join(dataset.model_path, 'compression/iteration_{}'.format(load_iteration)))
         
         point_cloud_path = os.path.join(dataset.model_path, "point_cloud/iteration_{}".format(load_iteration))
         gaussians.save_ply(os.path.join(point_cloud_path, "point_cloud.ply"))

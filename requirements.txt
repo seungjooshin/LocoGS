@@ -1,4 +1,5 @@
 submodules/diff-gaussian-rasterization
+submodules/diff-gaussian-rasterization-sh
 submodules/simple-knn
 git+https://github.com/NVlabs/tiny-cuda-nn.git/#subdirectory=bindings/torch
 numpy==1.23.4

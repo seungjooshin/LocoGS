@@ -348,20 +348,11 @@ class GaussianModel:
 
     def save_ply(self, path):
         mkdir_p(os.path.dirname(path))
-
-        self.update_attributes()
         
         xyz = self._xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
         f_dc = self._features_dc.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
-        # apply sh_mask to SHs
-        f_rest = self._features_rest
-        sh_mask = (self.get_sh_mask > 0.01)
-        sh_mask_degree = torch.ones_like(f_rest) # (N, 15, 3)
-        for degree in range(1, self.active_sh_degree + 1):
-            sh_mask_degree[:, degree**2 - 1:, :] *= sh_mask[:, degree - 1:degree].unsqueeze(1)
-        f_rest *= sh_mask_degree
-        f_rest = f_rest.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
+        f_rest = self._features_rest.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
         opacities = self._opacity.detach().cpu().numpy()
         scale = torch.clamp_min(self.scaling_base_inverse_activation(self.get_scaling), min=-20).detach().cpu().numpy()
         rotation = self._rotation.detach().cpu().numpy()
@@ -650,7 +641,7 @@ class GaussianModel:
     def decompress_attributes(self, path):
         # G-PCC decoding
         xyz = decode_xyz(path)
-        self._xyz = nn.Parameter(torch.from_numpy(np.asarray(xyz)).cuda())
+        self._xyz = torch.from_numpy(np.asarray(xyz)).cuda()
 
         # uniform dequantization
         f_dc_dict = np.load(os.path.join(path, 'f_dc.npz'))
@@ -661,17 +652,13 @@ class GaussianModel:
         scaling_base = dequantize(scale_base_dict['data'], scale_base_dict['scale'], scale_base_dict['min'])
         grid_params = dequantize(grid_dict['data'], grid_dict['scale'], grid_dict['min'], log=True)
 
-        self._features_dc = nn.Parameter(torch.from_numpy(np.asarray(f_dc)).cuda())
-        self._scaling_base = nn.Parameter(torch.from_numpy(np.asarray(scaling_base)).cuda())
+        self._features_dc = torch.from_numpy(np.asarray(f_dc)).cuda()
+        self._scaling_base = torch.from_numpy(np.asarray(scaling_base)).cuda()
         self._grid.params = nn.Parameter(torch.from_numpy(np.asarray(grid_params)).half().cuda())
         
-        # mask
-        self._mask = nn.Parameter(torch.ones_like(self.get_xyz[:, :1]).cuda()) * 1e2
-
         # sh_mask
         sh_mask = np.load(os.path.join(path, 'sh_mask.npz'))['data'].astype(np.float32)
-        sh_mask = (sh_mask * 2 - 1) * 1e2
-        self._sh_mask = nn.Parameter(torch.from_numpy(np.asarray(sh_mask)).cuda())
+        self._sh_mask = torch.from_numpy(np.asarray(sh_mask)).cuda()
 
         # mlps
         opacity_params = np.load(os.path.join(path, 'opacity.npz'))['data']
@@ -685,3 +672,14 @@ class GaussianModel:
         self._rotation_head.params = nn.Parameter(torch.from_numpy(np.asarray(rotation_params)).half().cuda())
 
         self.active_sh_degree = self.max_sh_degree
+
+    def load_attributes(self, path):
+        self.decompress_attributes(path)
+        self.update_attributes()
+        sh_mask = self._sh_mask
+        sh_mask_degree = torch.ones_like(self._features_rest) # (N, 15, 3)
+        for deg in range(1, self.active_sh_degree + 1):
+            sh_mask_degree[:, deg**2 - 1:, :] *= sh_mask[:, deg - 1:deg].unsqueeze(1)
+        
+        self._features_rest *= sh_mask_degree
+        self.sh_levels = sh_mask.sum(1).int()

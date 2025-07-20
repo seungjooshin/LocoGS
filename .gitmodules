@@ -10,3 +10,6 @@
 [submodule "submodules/nerfstudio"]
 	path = submodules/nerfstudio
 	url = https://github.com/seungjooshin/nerfstudio.git
+[submodule "submodules/diff-gaussian-rasterization-sh"]
+	path = submodules/diff-gaussian-rasterization-sh
+	url = https://github.com/seungjooshin/diff-gaussian-rasterization-sh.git

@@ -75,7 +75,7 @@ class Scene:
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
 
         if self.loaded_iter:
-            self.gaussians.decompress_attributes(os.path.join(self.model_path, 'compression/iteration_{}'.format(self.loaded_iter)))
+            self.gaussians.load_attributes(os.path.join(self.model_path, 'compression/iteration_{}'.format(self.loaded_iter)))
         else:
             self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent)
 
