@@ -167,10 +167,12 @@ python convert2ply.py -m output/${SCENE}
 
 If our work is useful, please consider citing our paper:
 ```bib
-@inproceedings{shin2025locality,
+@inproceedings{shin2025localityaware,
   title={Locality-aware Gaussian Compression for Fast and High-quality Rendering},
-  author={Shin, Seungjoo and Park, Jaesik and Cho, Sunghyun},
-  booktitle={The Thirteenth International Conference on Learning Representations}
+  author={Seungjoo Shin and Jaesik Park and Sunghyun Cho},
+  booktitle={The Thirteenth International Conference on Learning Representations},
+  year={2025},
+  url={https://openreview.net/forum?id=dHYwfV2KeP}
 }
 ```
 
